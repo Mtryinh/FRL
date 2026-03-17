@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roxy Lanes — Daily Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#08090a;--surf:#0f1112;--surf2:#161819;--surf3:#1d2022;
+  --bdr:#252a2c;--bdr2:#2f3538;--txt:#e2e8e6;--dim:#7a9090;--mute:#3d5050;
+  --acc:#e8c84a;--acc2:#b89c2a;--grn:#52d98a;--red:#f07070;--amb:#f0a030;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'IBM Plex Mono',monospace;font-size:13px;min-height:100vh;}
+
+#pinOverlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;}
+#pinOverlay.hidden{display:none;}
+.pin-box{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:32px 40px;text-align:center;max-width:320px;width:90%;}
+.pin-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--acc);margin-bottom:6px;}
+.pin-sub{font-size:11px;color:var(--dim);margin-bottom:20px;}
+.pin-input{background:var(--surf2);border:1px solid var(--bdr2);color:var(--txt);font-family:'IBM Plex Mono',monospace;font-size:22px;text-align:center;letter-spacing:8px;padding:10px 16px;border-radius:6px;outline:none;width:100%;margin-bottom:10px;}
+.pin-input:focus{border-color:var(--acc);}
+.pin-btn{background:var(--acc);color:#08090a;border:none;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;padding:10px 24px;border-radius:6px;cursor:pointer;width:100%;}
+.pin-err{color:var(--red);font-size:11px;min-height:16px;margin-bottom:4px;}
+
+#syncStatus{position:fixed;bottom:16px;left:16px;font-size:10px;color:var(--mute);z-index:100;letter-spacing:.4px;}
+#syncStatus.syncing{color:var(--amb);}
+#syncStatus.ok{color:var(--grn);}
+#syncStatus.err{color:var(--red);}
+
+header{position:sticky;top:0;z-index:100;height:54px;background:var(--surf);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 20px;gap:12px;}
+.logo{font-family:'Playfair Display',serif;font-size:19px;color:var(--acc);white-space:nowrap;}
+.logo em{color:var(--dim);font-style:normal;font-size:11px;font-family:'IBM Plex Mono',monospace;margin-left:8px;letter-spacing:1px;text-transform:uppercase;}
+.badge{background:var(--surf3);border:1px solid var(--bdr2);border-radius:3px;padding:3px 9px;font-size:10px;color:var(--dim);letter-spacing:.8px;text-transform:uppercase;}
+.nav-link{background:var(--surf2);border:1px solid var(--bdr2);color:var(--acc2);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 11px;border-radius:4px;text-decoration:none;white-space:nowrap;transition:all .12s;}
+.nav-link:hover{border-color:var(--acc);color:var(--acc);}
+.hdr-right{display:flex;gap:6px;margin-left:auto;align-items:center;}
+.btn{background:var(--surf2);border:1px solid var(--bdr2);color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 11px;border-radius:4px;cursor:pointer;transition:all .12s;white-space:nowrap;}
+.btn:hover{border-color:var(--acc);color:var(--acc);}
+.btn.dng{border-color:var(--red);color:var(--red);}
+
+.week-nav{display:flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf);border-bottom:1px solid var(--bdr);flex-wrap:wrap;}
+.week-nav .nav-btn{background:var(--surf2);border:1px solid var(--bdr2);color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:14px;padding:4px 14px;border-radius:4px;cursor:pointer;transition:all .12s;}
+.week-nav .nav-btn:hover{border-color:var(--acc);color:var(--acc);}
+.week-label{font-family:'Playfair Display',serif;font-size:18px;min-width:280px;text-align:center;}
+.week-sub{font-size:10px;color:var(--mute);}
+.jump-wrap{display:flex;align-items:center;gap:8px;border-left:1px solid var(--bdr);padding-left:16px;margin-left:6px;}
+.jump-wrap span{font-size:10px;color:var(--mute);letter-spacing:.8px;text-transform:uppercase;white-space:nowrap;}
+input[type=date]{background:var(--surf2);border:1px solid var(--bdr2);color:var(--txt);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 8px;border-radius:4px;outline:none;cursor:pointer;color-scheme:dark;}
+input[type=date]:focus{border-color:var(--acc);}
+
+main{padding:16px 20px;max-width:1700px;}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:16px;}
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:6px;padding:11px 13px;}
+.cl{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--mute);margin-bottom:4px;}
+.cv{font-family:'Playfair Display',serif;font-size:20px;line-height:1;margin-bottom:2px;}
+.cs{font-size:10px;color:var(--dim);}
+.cs.pos{color:var(--grn);}.cs.neg{color:var(--red);}
+
+.day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:16px;}
+@media(max-width:1200px){.day-grid{grid-template-columns:repeat(4,1fr);}}
+@media(max-width:600px){.day-grid{grid-template-columns:repeat(2,1fr);}}
+
+.day-card{background:var(--surf);border:1px solid var(--bdr);border-radius:8px;overflow:hidden;}
+.day-card.today{border-color:var(--acc2);}
+.day-head{background:var(--surf2);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bdr);}
+.day-name{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);}
+.day-date{font-size:10px;color:var(--mute);}
+.day-body{padding:10px 12px;}
+
+.day-total{font-family:'Playfair Display',serif;font-size:22px;margin-bottom:3px;}
+.day-var{font-size:10px;margin-bottom:8px;min-height:14px;}
+.pbr-wrap{margin-bottom:7px;}
+.pbr-meta{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;}
+.pbr-track{height:4px;background:var(--surf3);border-radius:2px;overflow:hidden;}
+.pbr-fill{height:100%;border-radius:2px;transition:width .3s;}
+
+.divider{border:none;border-top:1px solid var(--bdr);margin:8px 0;}
+.section-label{font-size:9px;color:var(--mute);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px;}
+
+.field-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.field-lbl{font-size:10px;color:var(--mute);width:52px;flex-shrink:0;}
+.field-inp{background:var(--surf2);border:1px solid var(--bdr2);color:var(--txt);font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;flex:1;min-width:0;padding:4px 7px;border-radius:3px;outline:none;-moz-appearance:textfield;}
+.field-inp::-webkit-inner-spin-button,.field-inp::-webkit-outer-spin-button{-webkit-appearance:none;}
+.field-inp:focus{border-color:var(--acc);background:var(--surf3);}
+.field-inp.pbr-inp{border-color:rgba(232,200,74,.25);color:var(--acc2);}
+.field-inp.pbr-inp:focus{border-color:var(--acc);}
+.field-inp.dim-inp{opacity:.6;}
+.field-inp.dim-inp:focus{opacity:1;}
+
+.staff-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:2px;}
+.staff-cell{text-align:center;}
+.staff-inp{background:var(--surf2);border:1px solid var(--bdr2);color:var(--txt);font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:center;width:100%;padding:4px;border-radius:3px;outline:none;-moz-appearance:textfield;}
+.staff-inp::-webkit-inner-spin-button,.staff-inp::-webkit-outer-spin-button{-webkit-appearance:none;}
+.staff-inp:focus{border-color:var(--acc);background:var(--surf3);}
+.staff-lbl{font-size:9px;color:var(--mute);margin-top:2px;letter-spacing:.5px;}
+
+.notes-inp{width:100%;background:var(--surf2);border:1px solid var(--bdr);color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:10px;padding:5px 7px;border-radius:3px;resize:none;outline:none;min-height:36px;margin-top:6px;}
+.notes-inp:focus{border-color:var(--acc);color:var(--txt);}
+
+.sec-title{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mute);margin:16px 0 8px;}
+.tw{overflow-x:auto;border:1px solid var(--bdr);border-radius:6px;margin-bottom:16px;}
+table{width:100%;border-collapse:collapse;}
+thead th{background:var(--surf2);padding:8px 10px;text-align:right;font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--bdr);white-space:nowrap;}
+thead th:first-child{text-align:left;min-width:110px;}
+tbody tr{border-bottom:1px solid var(--bdr);}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,.01);}
+td{padding:7px 10px;text-align:right;font-size:12px;}
+td:first-child{text-align:left;color:var(--dim);font-size:11px;}
+tr.tot td{background:var(--surf2);font-weight:500;}
+.vp{color:var(--grn);}.vn{color:var(--red);}.vz{color:var(--mute);}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle;}
+.dg{background:var(--grn);box-shadow:0 0 4px var(--grn);}
+.da{background:var(--amb);box-shadow:0 0 4px var(--amb);}
+.dr{background:var(--red);box-shadow:0 0 4px var(--red);}
+
+#toast{position:fixed;bottom:16px;right:16px;background:var(--surf2);border:1px solid var(--bdr2);border-radius:5px;padding:8px 14px;font-size:11px;color:var(--txt);transform:translateY(50px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);z-index:999;}
+#toast.show{transform:translateY(0);opacity:1;}
+#toast.success{border-color:var(--acc);color:var(--acc);}
+#toast.error{border-color:var(--red);color:var(--red);}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<div id="pinOverlay">
+  <div class="pin-box">
+    <div class="pin-title">Roxy Lanes</div>
+    <div class="pin-sub">Enter PIN to access Daily Tracker</div>
+    <input type="password" class="pin-input" id="pinInput" maxlength="10" placeholder="••••"
+      onkeydown="if(event.key==='Enter')checkPin()">
+    <div class="pin-err" id="pinErr"></div>
+    <button class="pin-btn" onclick="checkPin()">Unlock</button>
+  </div>
+</div>
+
+<div id="syncStatus">⬤ ready</div>
+
+<header>
+  <div class="logo">Roxy Lanes <em>Daily Tracker</em></div>
+  <div class="badge">Bottle Lane</div>
+  <a class="nav-link" href="roxy_pl_v4.html">← P&L Analyser</a>
+  <div class="hdr-right">
+    <button class="btn" onclick="exportCSV()">↓ CSV</button>
+    <button class="btn dng" onclick="clearWeek()">Reset Week</button>
+  </div>
+</header>
+
+<div class="week-nav">
+  <button class="nav-btn" onclick="prevWeek()">◀</button>
+  <div style="text-align:center">
+    <div class="week-label" id="weekLabel">—</div>
+    <div class="week-sub" id="weekSub">—</div>
+  </div>
+  <button class="nav-btn" onclick="nextWeek()">▶</button>
+  <button class="btn" onclick="goToday()" style="margin-left:6px;">Today</button>
+  <div class="jump-wrap">
+    <span>Jump to</span>
+    <input type="date" id="datePicker" onchange="jumpToDate(this.value)">
+    <span style="font-size:10px;color:var(--mute)">→ week</span>
+  </div>
+</div>
+
+<main>
+  <div class="cards" id="weekCards"></div>
+  <div class="day-grid" id="dayGrid"></div>
+  <div class="sec-title">Weekly Summary</div>
+  <div class="tw"><table>
+    <thead><tr>
+      <th style="text-align:left">Metric</th>
+      <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
+      <th>Total</th><th>Budget</th><th>Var £</th><th>Var %</th>
+      <th>LY</th><th>vs LY £</th><th>vs LY %</th>
+    </tr></thead>
+    <tbody id="summaryBody"></tbody>
+  </table></div>
+  <div class="sec-title">PBR vs Actual</div>
+  <div class="tw"><table>
+    <thead><tr>
+      <th style="text-align:left">Day</th>
+      <th>PBR</th><th>Actual</th><th>Variance £</th><th>Conversion</th><th>Status</th>
+    </tr></thead>
+    <tbody id="pbrBody"></tbody>
+  </table></div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────
+const CONFIG = {
+  supabaseUrl: 'https://jwhzkfyrcxdklnwoojqz.supabase.co',
+  supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3aHprZnlyY3hka2xud29vanF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3Nzk4OTQsImV4cCI6MjA4OTM1NTg5NH0.wuJI1JppAqC05BW2IDbq6r2quEw7C83DzWUjuq23tRI',
+  pin: '1980',
+  venue: 'bottle-lane',
+};
+
+// ── Constants ─────────────────────────────────────────────────
+var DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+var NUM_FIELDS = ['wet','dry','gam','pbr','staff','hours','bud_wet','bud_dry','bud_gam','ly_wet','ly_dry','ly_gam'];
+var TXT_FIELDS = ['notes'];
+
+// ── State ─────────────────────────────────────────────────────
+var D = {};
+var currentMon = getMondayOf(new Date());
+
+// ── PIN ───────────────────────────────────────────────────────
+function checkPin() {
+  var val = document.getElementById('pinInput').value;
+  if (val === String(CONFIG.pin)) {
+    document.getElementById('pinOverlay').classList.add('hidden');
+    sessionStorage.setItem('roxy_auth','1');
+    init();
+  } else {
+    document.getElementById('pinErr').textContent = 'Incorrect PIN — try again';
+    document.getElementById('pinInput').value = '';
+  }
+}
+
+// ── Supabase ──────────────────────────────────────────────────
+function sbHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'apikey': CONFIG.supabaseKey,
+    'Authorization': 'Bearer ' + CONFIG.supabaseKey
+  };
+}
+
+function setSyncStatus(state) {
+  var el = document.getElementById('syncStatus');
+  el.className = state;
+  var msgs = {syncing:'⬤ saving…', ok:'⬤ saved', err:'⬤ sync error'};
+  el.textContent = msgs[state] || '⬤ ready';
+  if (state === 'ok') {
+    setTimeout(function() { el.textContent = '⬤ ready'; el.className = ''; }, 2000);
+  }
+}
+
+async function sbLoad(weekKey) {
+  setSyncStatus('syncing');
+  try {
+    var url = CONFIG.supabaseUrl + '/rest/v1/daily_data?venue=eq.' + CONFIG.venue + '&week_key=eq.' + weekKey;
+    var res = await fetch(url, { headers: sbHeaders() });
+    if (!res.ok) { var err = await res.text(); throw new Error(err); }
+    var rows = await res.json();
+    ensWeek(weekKey);
+    rows.forEach(function(r) {
+      if (r.day_index < 0 || r.day_index > 6) return;
+      if (NUM_FIELDS.indexOf(r.field) > -1) {
+        D[weekKey][r.day_index][r.field] = (r.value != null) ? r.value : '';
+      }
+      if (TXT_FIELDS.indexOf(r.field) > -1) {
+        D[weekKey][r.day_index][r.field] = r.text_value || '';
+      }
+    });
+    setSyncStatus('ok');
+  } catch(e) {
+    setSyncStatus('err');
+    console.error('Load error:', e.message || e);
+    toast('Sync error: ' + (e.message || 'check console'), 'error');
+  }
+}
+
+async function sbSave(weekKey, dayIdx, field, val) {
+  setSyncStatus('syncing');
+  var isTxt = TXT_FIELDS.indexOf(field) > -1;
+  var payload = [{
+    venue: CONFIG.venue,
+    week_key: weekKey,
+    day_index: dayIdx,
+    field: field,
+    value: isTxt ? null : (val === '' || val == null ? null : parseFloat(val)),
+    text_value: isTxt ? (val || null) : null
+  }];
+  try {
+    var res = await fetch(CONFIG.supabaseUrl + '/rest/v1/daily_data', {
+      method: 'POST',
+      headers: Object.assign({}, sbHeaders(), {'Prefer': 'resolution=merge-duplicates'}),
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) { var err = await res.text(); throw new Error(err); }
+    setSyncStatus('ok');
+  } catch(e) {
+    setSyncStatus('err');
+    console.error('Save error:', e.message || e);
+    toast('Save error: ' + (e.message || 'check console'), 'error');
+  }
+}
+
+async function sbDeleteWeek(weekKey) {
+  setSyncStatus('syncing');
+  try {
+    var res = await fetch(CONFIG.supabaseUrl + '/rest/v1/daily_data?venue=eq.' + CONFIG.venue + '&week_key=eq.' + weekKey, {
+      method: 'DELETE',
+      headers: sbHeaders()
+    });
+    if (!res.ok) throw new Error(await res.text());
+    setSyncStatus('ok');
+  } catch(e) {
+    setSyncStatus('err');
+    console.error(e);
+  }
+}
+
+// ── Date helpers ──────────────────────────────────────────────
+function getMondayOf(d) {
+  var date = new Date(d);
+  var day = date.getDay();
+  var diff = (day === 0 ? -6 : 1 - day);
+  date.setDate(date.getDate() + diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
+function addDays(d, n) { var r = new Date(d); r.setDate(r.getDate() + n); return r; }
+function isoWeek(d) {
+  var date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  var dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  var yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+function weekKey(mon) {
+  return mon.getFullYear() + '-W' + String(isoWeek(mon)).padStart(2,'0');
+}
+function fmtDate(d) {
+  return d.toLocaleDateString('en-GB', {day:'2-digit', month:'short'});
+}
+
+// ── Data helpers ──────────────────────────────────────────────
+function ensWeek(key) {
+  if (!D[key]) {
+    D[key] = [];
+    for (var i = 0; i < 7; i++) {
+      var day = {};
+      NUM_FIELDS.forEach(function(f) { day[f] = ''; });
+      TXT_FIELDS.forEach(function(f) { day[f] = ''; });
+      D[key].push(day);
+    }
+  }
+}
+function gn(key, di, field) {
+  ensWeek(key);
+  var v = D[key][di][field];
+  return (v === '' || v == null) ? 0 : parseFloat(v);
+}
+
+// ── Format ────────────────────────────────────────────────────
+function f(v) {
+  if (v === 0 || isNaN(v)) return '—';
+  var a = Math.abs(v).toLocaleString('en-GB', {minimumFractionDigits:0, maximumFractionDigits:0});
+  return v < 0 ? '(£' + a + ')' : '£' + a;
+}
+function fp(v) {
+  if (!isFinite(v) || isNaN(v)) return '—';
+  var s = Math.abs(v).toFixed(1) + '%';
+  return v > 0 ? '+' + s : v < 0 ? '-' + s : s;
+}
+function vcol(d) { return (!d || isNaN(d)) ? 'vz' : d > 0 ? 'vp' : 'vn'; }
+
+// ── Totals ────────────────────────────────────────────────────
+function getDayTotals(key) {
+  ensWeek(key);
+  return DAYS.map(function(_, i) {
+    var wet = gn(key,i,'wet'), dry = gn(key,i,'dry'), gam = gn(key,i,'gam');
+    return {
+      wet: wet, dry: dry, gam: gam,
+      total: wet + dry + gam,
+      pbr:   gn(key,i,'pbr'),
+      staff: gn(key,i,'staff'),
+      hours: gn(key,i,'hours'),
+      bud:   gn(key,i,'bud_wet') + gn(key,i,'bud_dry') + gn(key,i,'bud_gam'),
+      ly:    gn(key,i,'ly_wet')  + gn(key,i,'ly_dry')  + gn(key,i,'ly_gam')
+    };
+  });
+}
+
+// ── Render week cards ─────────────────────────────────────────
+function renderWeekCards(key) {
+  var dt = getDayTotals(key);
+  var wt  = dt.reduce(function(s,d){return s+d.total;},0);
+  var wb  = dt.reduce(function(s,d){return s+d.bud;},0);
+  var wly = dt.reduce(function(s,d){return s+d.ly;},0);
+  var wp  = dt.reduce(function(s,d){return s+d.pbr;},0);
+  var ww  = dt.reduce(function(s,d){return s+d.wet;},0);
+  var wd  = dt.reduce(function(s,d){return s+d.dry;},0);
+  var wg  = dt.reduce(function(s,d){return s+d.gam;},0);
+  var ws  = dt.reduce(function(s,d){return s+d.staff;},0);
+  var wh  = dt.reduce(function(s,d){return s+d.hours;},0);
+  var vb = wt - wb, vly = wt - wly;
+  var pc = wp > 0 ? Math.min(999, (wt/wp)*100) : 0;
+  var items = [
+    {l:'Week Revenue',   v:f(wt),  s:wb  ? f(vb)  +' vs budget' : '',  cls:vb>=0?'pos':'neg'},
+    {l:'Budget',         v:f(wb),  s:''},
+    {l:'vs Last Year',   v:f(vly), s:wly ? fp((vly/Math.abs(wly))*100) : '', cls:vly>=0?'pos':'neg'},
+    {l:'PBR',            v:f(wp),  s:pc  ? pc.toFixed(0)+'% converted' : '', cls:''},
+    {l:'Wet Revenue',    v:f(ww),  s:wt  ? ((ww/wt)*100).toFixed(1)+'% of total' : '', cls:''},
+    {l:'Dry Revenue',    v:f(wd),  s:wt  ? ((wd/wt)*100).toFixed(1)+'% of total' : '', cls:''},
+    {l:'Gaming Revenue', v:f(wg),  s:wt  ? ((wg/wt)*100).toFixed(1)+'% of total' : '', cls:''},
+    {l:'Staff Shifts',   v:ws||'—',s:wh  ? wh+' hrs total' : '', cls:''},
+  ];
+  document.getElementById('weekCards').innerHTML = items.map(function(c) {
+    return '<div class="card"><div class="cl">'+c.l+'</div><div class="cv">'+c.v+'</div>'
+      +(c.s ? '<div class="cs '+c.cls+'">'+c.s+'</div>' : '')+'</div>';
+  }).join('');
+}
+
+// ── Render day cards ──────────────────────────────────────────
+function renderDayGrid(key) {
+  var today = new Date(); today.setHours(0,0,0,0);
+  ensWeek(key);
+  var html = '';
+  for (var i = 0; i < 7; i++) {
+    (function(di) {
+      var dt    = addDays(currentMon, di);
+      var isToday = dt.getTime() === today.getTime();
+      var wk    = D[key][di];
+      var wet   = parseFloat(wk.wet)||0, dry=parseFloat(wk.dry)||0, gam=parseFloat(wk.gam)||0;
+      var total = wet+dry+gam;
+      var bud   = (parseFloat(wk.bud_wet)||0)+(parseFloat(wk.bud_dry)||0)+(parseFloat(wk.bud_gam)||0);
+      var ly    = (parseFloat(wk.ly_wet)||0)+(parseFloat(wk.ly_dry)||0)+(parseFloat(wk.ly_gam)||0);
+      var pbr   = parseFloat(wk.pbr)||0;
+      var varB  = bud  ? total - bud  : null;
+      var varL  = ly   ? total - ly   : null;
+      var pbrPct= pbr > 0 ? Math.min(100,(total/pbr)*100) : 0;
+      var pbrCol= pbrPct>=100?'var(--grn)':pbrPct>=70?'var(--amb)':'var(--red)';
+      var varStr= (varB!==null ? f(varB)+' vs bud' : 'No budget set')
+                 +(varL!==null ? ' · '+f(varL)+' vs LY' : '');
+      var varCol= varB===null?'var(--mute)':varB>=0?'var(--grn)':'var(--red)';
+
+      // Use data attributes for key+di so JS can find them easily
+      html += '<div class="day-card'+(isToday?' today':'')+'" data-di="'+di+'">'
+        +'<div class="day-head"><span class="day-name">'+DAYS[di]+'</span><span class="day-date">'+fmtDate(dt)+'</span></div>'
+        +'<div class="day-body">'
+          +'<div class="day-total" id="dtotal-'+di+'">'+(total>0?f(total):'—')+'</div>'
+          +'<div class="day-var" id="dvar-'+di+'" style="color:'+varCol+'">'+varStr+'</div>'
+          +(pbr>0?'<div class="pbr-wrap"><div class="pbr-meta"><span style="color:var(--mute)">PBR '+f(pbr)+'</span><span style="color:'+pbrCol+'" id="dpbrpct-'+di+'">'+pbrPct.toFixed(0)+'%</span></div><div class="pbr-track"><div class="pbr-fill" id="dpbrbar-'+di+'" style="width:'+pbrPct+'%;background:'+pbrCol+'"></div></div></div>':'')
+          +'<hr class="divider">'
+          +'<div class="section-label">Actuals</div>'
+          +'<div class="field-row"><span class="field-lbl">Wet £</span><input type="number" class="field-inp" step="0.01" placeholder="0" value="'+(wk.wet||'')+'" onblur="fieldBlur(\''+key+'\','+di+',\'wet\',this)"></div>'
+          +'<div class="field-row"><span class="field-lbl">Dry £</span><input type="number" class="field-inp" step="0.01" placeholder="0" value="'+(wk.dry||'')+'" onblur="fieldBlur(\''+key+'\','+di+',\'dry\',this)"></div>'
+          +'<div class="field-row"><span class="field-lbl">Gaming £</span><input type="number" class="field-inp" step="0.01" placeholder="0" value="'+(wk.gam||'')+'" onblur="fieldBlur(\''+key+'\','+di+',\'gam\',this)"></div>'
+          +'<hr class="divider">'
+          +'<div class="section-label">PBR</div>'
+          +'<div class="field-row"><span class="field-lbl">Total £</span><input type="number" class="field-inp pbr-inp" step="0.01" placeholder="0" value="'+(wk.pbr||'')+'" onblur="fieldBlur(\''+key+'\','+di+',\'pbr\',this)"></div>'
+          +'<hr class="divider">'
+          +'<div class="section-label">Budget</div>'
+          +'<div class="field-row"><span class="field-lbl">Wet £</span><input type="number" class="field-inp dim-inp" step="0.01" placeholder="0" value="'+(wk.bud_wet||'')+'" onblur="fieldBlur(\''+key+'\','+di+',\'bud_wet\',this)"></div>'
+          +'<div class="field-row"><span class="field-lbl">Dry £</span><input type="number" class="field-inp dim-inp" step="0.01" placeholder="0" value="'+(wk.bud_dry||'')+'" onblur="fieldBlur(\''+key+'\','+di+',\'bud_dry\',this)"></div>'
+          +'<div class="field-row"><span class="field-lbl">Gaming £</span><input type="number" class="field-inp dim-inp" step="0.01" placeholder="0" value="'+(wk.bud_gam||'')+'" onblur="fieldBlur(\''+key+'\','+di+',\'bud_gam\',this)"></div>'
+          +'<hr class="divider">'
+          +'<div class="section-label">Last Year</div>'
+          +'<div class="field-row"><span class="field-lbl">Wet £</span><input type="number" class="field-inp dim-inp" step="0.01" placeholder="0" value="'+(wk.ly_wet||'')+'" onblur="fieldBlur(\''+key+'\','+di+',\'ly_wet\',this)"></div>'
+          +'<div class="field-row"><span class="field-lbl">Dry £</span><input type="number" class="field-inp dim-inp" step="0.01" placeholder="0" value="'+(wk.ly_dry||'')+'" onblur="fieldBlur(\''+key+'\','+di+',\'ly_dry\',this)"></div>'
+          +'<div class="field-row"><span class="field-lbl">Gaming £</span><input type="number" class="field-inp dim-inp" step="0.01" placeholder="0" value="'+(wk.ly_gam||'')+'" onblur="fieldBlur(\''+key+'\','+di+',\'ly_gam\',this)"></div>'
+          +'<hr class="divider">'
+          +'<div class="section-label">Staff</div>'
+          +'<div class="staff-grid">'
+            +'<div class="staff-cell"><input type="number" class="staff-inp" step="1" min="0" placeholder="0" value="'+(wk.staff||'')+'" onblur="fieldBlur(\''+key+'\','+di+',\'staff\',this)"><div class="staff-lbl">Shifts</div></div>'
+            +'<div class="staff-cell"><input type="number" class="staff-inp" step="0.5" min="0" placeholder="0" value="'+(wk.hours||'')+'" onblur="fieldBlur(\''+key+'\','+di+',\'hours\',this)"><div class="staff-lbl">Hours</div></div>'
+          +'</div>'
+          +'<textarea class="notes-inp" placeholder="Notes…" onblur="fieldBlur(\''+key+'\','+di+',\'notes\',this)">'+(wk.notes||'')+'</textarea>'
+        +'</div>'
+      +'</div>';
+    })(i);
+  }
+  document.getElementById('dayGrid').innerHTML = html;
+}
+
+// ── Render summary tables ─────────────────────────────────────
+function renderTables(key) {
+  var dt = getDayTotals(key);
+  var weekTotal = dt.reduce(function(s,d){return s+d.total;},0);
+
+  var rows = [
+    {l:'Wet Revenue',   f:'wet',   src:'act'},
+    {l:'Dry Revenue',   f:'dry',   src:'act'},
+    {l:'Gaming Rev',    f:'gam',   src:'act'},
+    {l:'Total Revenue', f:'total', src:'total'},
+    {l:'PBR',           f:'pbr',   src:'pbr'},
+    {l:'Staff Shifts',  f:'staff', src:'num'},
+    {l:'Staff Hours',   f:'hours', src:'num'},
+  ];
+
+  var sh = '';
+  rows.forEach(function(r) {
+    var vals = dt.map(function(d) {
+      if (r.src==='act')   return d[r.f]||0;
+      if (r.src==='total') return d.total;
+      if (r.src==='pbr')   return d.pbr;
+      if (r.src==='num')   return gn(key, dt.indexOf(d), r.f);
+      return 0;
+    });
+    // fix indexOf issue for num
+    if (r.src==='num') vals = DAYS.map(function(_,i){ return gn(key,i,r.f); });
+
+    var wkT = vals.reduce(function(a,b){return a+b;},0);
+    var isRev = ['wet','dry','gam','total','pbr'].indexOf(r.f) > -1 && r.src !== 'num';
+    var budT=0, lyT=0;
+    if (r.src==='act') {
+      DAYS.forEach(function(_,i){ budT+=gn(key,i,'bud_'+r.f); lyT+=gn(key,i,'ly_'+r.f); });
+    } else if (r.src==='total') {
+      dt.forEach(function(d){ budT+=d.bud; lyT+=d.ly; });
+    }
+    var vb=wkT-budT, vl=wkT-lyT;
+    var fmt = isRev ? f : function(v){return v||'—';};
+    sh += '<tr class="'+(r.f==='total'?'tot':'')+'">'
+      +'<td>'+r.l+'</td>'
+      +vals.map(function(v){return'<td>'+fmt(v)+'</td>';}).join('')
+      +'<td>'+fmt(wkT)+'</td>'
+      +'<td>'+(isRev&&r.src!=='pbr'?f(budT):'—')+'</td>'
+      +'<td class="'+(isRev&&r.src!=='pbr'?vcol(vb):'')+'">'+(isRev&&r.src!=='pbr'?f(vb):'—')+'</td>'
+      +'<td class="'+(isRev&&r.src!=='pbr'?vcol(vb):'')+'">'+(isRev&&r.src!=='pbr'&&budT?fp((vb/Math.abs(budT))*100):'—')+'</td>'
+      +'<td>'+(isRev&&r.src!=='pbr'?f(lyT):'—')+'</td>'
+      +'<td class="'+(isRev&&r.src!=='pbr'?vcol(vl):'')+'">'+(isRev&&r.src!=='pbr'?f(vl):'—')+'</td>'
+      +'<td class="'+(isRev&&r.src!=='pbr'?vcol(vl):'')+'">'+(isRev&&r.src!=='pbr'&&lyT?fp((vl/Math.abs(lyT))*100):'—')+'</td>'
+      +'</tr>';
+  });
+  document.getElementById('summaryBody').innerHTML = sh;
+
+  // PBR table
+  var ph = '';
+  for (var i=0; i<7; i++) {
+    var d=dt[i], varPBR=d.total-d.pbr, conv=d.pbr>0?(d.total/d.pbr)*100:null;
+    var status = d.pbr===0
+      ? '<span style="color:var(--mute)">No PBR</span>'
+      : conv>=100 ? '<span class="dot dg"></span><span style="color:var(--grn)">Exceeded</span>'
+      : conv>=70  ? '<span class="dot da"></span><span style="color:var(--amb)">Partial</span>'
+      :              '<span class="dot dr"></span><span style="color:var(--red)">Below</span>';
+    ph += '<tr>'
+      +'<td>'+DAYS[i]+' '+fmtDate(addDays(currentMon,i))+'</td>'
+      +'<td>'+(d.pbr?f(d.pbr):'—')+'</td>'
+      +'<td>'+(d.total?f(d.total):'—')+'</td>'
+      +'<td class="'+(d.pbr?vcol(varPBR):'')+'">'+(d.pbr?f(varPBR):'—')+'</td>'
+      +'<td>'+(conv!==null?conv.toFixed(1)+'%':'—')+'</td>'
+      +'<td>'+status+'</td></tr>';
+  }
+  var tPBR=dt.reduce(function(s,d){return s+d.pbr;},0);
+  var tVar=weekTotal-tPBR, tConv=tPBR>0?(weekTotal/tPBR)*100:null;
+  ph += '<tr class="tot"><td>Week Total</td><td>'+f(tPBR)+'</td><td>'+f(weekTotal)+'</td>'
+    +'<td class="'+vcol(tVar)+'">'+f(tVar)+'</td>'
+    +'<td>'+(tConv!==null?tConv.toFixed(1)+'%':'—')+'</td>'
+    +'<td>'+(tConv===null?'—':tConv>=100?'<span style="color:var(--grn)">On Track</span>':'<span style="color:var(--red)">Below PBR</span>')+'</td></tr>';
+  document.getElementById('pbrBody').innerHTML = ph;
+}
+
+// ── Update single day display (no grid rebuild) ───────────────
+function refreshDayDisplay(key, di) {
+  var wk    = D[key][di];
+  var wet   = parseFloat(wk.wet)||0, dry=parseFloat(wk.dry)||0, gam=parseFloat(wk.gam)||0;
+  var total = wet+dry+gam;
+  var bud   = (parseFloat(wk.bud_wet)||0)+(parseFloat(wk.bud_dry)||0)+(parseFloat(wk.bud_gam)||0);
+  var ly    = (parseFloat(wk.ly_wet)||0)+(parseFloat(wk.ly_dry)||0)+(parseFloat(wk.ly_gam)||0);
+  var pbr   = parseFloat(wk.pbr)||0;
+  var varB  = bud  ? total - bud  : null;
+  var varL  = ly   ? total - ly   : null;
+  var varStr= (varB!==null?f(varB)+' vs bud':'No budget set')+(varL!==null?' · '+f(varL)+' vs LY':'');
+  var varCol= varB===null?'var(--mute)':varB>=0?'var(--grn)':'var(--red)';
+  var pbrPct= pbr>0?Math.min(100,(total/pbr)*100):0;
+  var pbrCol= pbrPct>=100?'var(--grn)':pbrPct>=70?'var(--amb)':'var(--red)';
+
+  var tEl = document.getElementById('dtotal-'+di);
+  var vEl = document.getElementById('dvar-'+di);
+  var bEl = document.getElementById('dpbrbar-'+di);
+  var pEl = document.getElementById('dpbrpct-'+di);
+  if (tEl) tEl.textContent = total>0 ? f(total) : '—';
+  if (vEl) { vEl.style.color=varCol; vEl.textContent=varStr; }
+  if (bEl) { bEl.style.width=pbrPct+'%'; bEl.style.background=pbrCol; }
+  if (pEl) { pEl.style.color=pbrCol; pEl.textContent=pbrPct.toFixed(0)+'%'; }
+}
+
+// ── Field blur handler (fires when user leaves an input) ──────
+function fieldBlur(key, di, field, el) {
+  var val = el.value === '' ? '' : el.value;
+  ensWeek(key);
+  D[key][di][field] = val;
+  // Refresh display and tables without touching inputs
+  refreshDayDisplay(key, di);
+  renderWeekCards(key);
+  renderTables(key);
+  // Save to Supabase
+  sbSave(key, di, field, val);
+}
+
+// ── Full render (only called on week change/load) ─────────────
+function renderAll(key) {
+  var sun = addDays(currentMon, 6);
+  document.getElementById('weekLabel').textContent = 'Week of '+fmtDate(currentMon)+' – '+fmtDate(sun);
+  document.getElementById('weekSub').textContent   = currentMon.getFullYear()+' · '+key;
+  syncDatePicker();
+  renderWeekCards(key);
+  renderDayGrid(key);
+  renderTables(key);
+}
+
+// ── Navigation ────────────────────────────────────────────────
+async function loadAndRender() {
+  var key = weekKey(currentMon);
+  await sbLoad(key);
+  renderAll(key);
+}
+function prevWeek() { currentMon = addDays(currentMon,-7); loadAndRender(); }
+function nextWeek() { currentMon = addDays(currentMon, 7); loadAndRender(); }
+function goToday()  { currentMon = getMondayOf(new Date()); loadAndRender(); }
+function jumpToDate(val) {
+  if (!val) return;
+  var p = val.split('-');
+  currentMon = getMondayOf(new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2])));
+  loadAndRender();
+}
+function syncDatePicker() {
+  var dp = document.getElementById('datePicker');
+  if (!dp) return;
+  var y=currentMon.getFullYear(), m=String(currentMon.getMonth()+1).padStart(2,'0'), d=String(currentMon.getDate()).padStart(2,'0');
+  dp.value = y+'-'+m+'-'+d;
+}
+
+// ── Export ────────────────────────────────────────────────────
+function exportCSV() {
+  var key = weekKey(currentMon);
+  ensWeek(key);
+  var rows = [['Day','Date','Wet','Dry','Gaming','Total','PBR','Bud Wet','Bud Dry','Bud Gaming','Bud Total','LY Wet','LY Dry','LY Gaming','LY Total','Staff Shifts','Staff Hours','Notes']];
+  for (var i=0; i<7; i++) {
+    var w=D[key][i], dt=addDays(currentMon,i);
+    var wet=parseFloat(w.wet)||0,dry=parseFloat(w.dry)||0,gam=parseFloat(w.gam)||0;
+    var bw=parseFloat(w.bud_wet)||0,bd=parseFloat(w.bud_dry)||0,bg=parseFloat(w.bud_gam)||0;
+    var lw=parseFloat(w.ly_wet)||0,ld=parseFloat(w.ly_dry)||0,lg=parseFloat(w.ly_gam)||0;
+    rows.push([DAYS[i],fmtDate(dt),wet,dry,gam,wet+dry+gam,parseFloat(w.pbr)||0,bw,bd,bg,bw+bd+bg,lw,ld,lg,lw+ld+lg,parseFloat(w.staff)||0,parseFloat(w.hours)||0,'"'+String(w.notes||'').replace(/"/g,'""')+'"']);
+  }
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.map(function(r){return r.join(',');}).join('\n')],{type:'text/csv'}));
+  a.download='roxy_daily_'+key+'.csv'; a.click();
+  toast('CSV exported ✓','success');
+}
+
+async function clearWeek() {
+  var key=weekKey(currentMon);
+  if (!confirm('Reset all data for '+key+'? This cannot be undone.')) return;
+  await sbDeleteWeek(key);
+  delete D[key];
+  renderAll(key);
+  toast('Week reset','error');
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+function toast(msg,type) {
+  var el=document.getElementById('toast'); el.textContent=msg; el.className='show '+(type||'');
+  clearTimeout(el._t); el._t=setTimeout(function(){el.className='';},2500);
+}
+
+// ── Boot ──────────────────────────────────────────────────────
+function checkPin() {
+  var val=document.getElementById('pinInput').value;
+  if (val===String(CONFIG.pin)) {
+    document.getElementById('pinOverlay').classList.add('hidden');
+    sessionStorage.setItem('roxy_auth','1');
+    init();
+  } else {
+    document.getElementById('pinErr').textContent='Incorrect PIN — try again';
+    document.getElementById('pinInput').value='';
+  }
+}
+
+async function init() { await loadAndRender(); }
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (sessionStorage.getItem('roxy_auth')==='1') {
+    document.getElementById('pinOverlay').classList.add('hidden');
+    init();
+  }
+});
+</script>
+</body>
+</html>
