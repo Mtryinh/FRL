@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Till — PAP Pricing</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14;
+    --surface: #111820;
+    --surface2: #192130;
+    --border: #1e2d40;
+    --accent: #f0c040;
+    --accent2: #e05a5a;
+    --accent3: #40d4a0;
+    --blue: #4090f0;
+    --text: #ddeeff;
+    --muted: #5a7a9a;
+    --success: #40d4a0;
+    --mm1: #f0c040;
+    --mm2: #e08040;
+    --mm3: #e05aaa;
+    --hour: #c084fc;
+    --half: #818cf8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* HEADER */
+  header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--blue);
+    padding: 14px 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  header h1 { font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--blue); letter-spacing: -0.02em; }
+  header h1 span { color: var(--text); }
+  .nav-link { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); text-decoration: none; padding: 5px 10px; border: 1px solid var(--border); border-radius: 3px; transition: all 0.15s; }
+  .nav-link:hover { color: var(--blue); border-color: var(--blue); }
+
+  /* VENUE SELECTOR */
+  .venue-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 14px; flex-shrink: 0; flex-wrap: wrap;
+  }
+  .venue-bar label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); white-space: nowrap; }
+  .venue-bar select { background: var(--surface2); border: 1.5px solid var(--blue); color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.9rem; font-weight: 500; padding: 8px 14px; border-radius: 3px; outline: none; cursor: pointer; }
+  .venue-bar select:focus { border-color: var(--accent); }
+
+  /* MAIN LAYOUT */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* LEFT — ITEM BROWSER */
+  .browser {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .browser-search {
+    position: relative;
+  }
+  .browser-search input {
+    width: 100%; background: var(--surface); border: 1.5px solid var(--border); color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 0.85rem; padding: 10px 16px 10px 36px;
+    border-radius: 3px; outline: none; transition: border-color 0.15s;
+  }
+  .browser-search input:focus { border-color: var(--blue); }
+  .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+
+  .cat-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .cat-tab {
+    font-family: 'DM Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 7px 14px; border: 1.5px solid var(--border); border-radius: 3px; cursor: pointer;
+    color: var(--muted); background: transparent; transition: all 0.15s;
+  }
+  .cat-tab.active { color: var(--bg); background: var(--blue); border-color: var(--blue); }
+  .cat-tab:hover:not(.active) { color: var(--blue); border-color: var(--blue); }
+
+  .section-heading {
+    font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted);
+    margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
+
+  /* ITEM CARDS */
+  .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+
+  .item-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; flex-direction: column; gap: 8px;
+    position: relative; overflow: hidden;
+  }
+  .item-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--border); transition: background 0.15s; }
+  .item-card.game-card::before { background: var(--blue); }
+  .item-card.food-card::before { background: #f0a060; }
+  .item-card.drink-card::before { background: var(--success); }
+
+  .item-card:hover { border-color: var(--blue); background: var(--surface2); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(64,144,240,0.12); }
+  .item-card:active { transform: translateY(0); }
+
+  .item-name { font-family: 'Syne', sans-serif; font-size: 0.88rem; font-weight: 700; color: var(--text); line-height: 1.2; }
+  .item-badge { display: inline-block; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 2px; }
+  .badge-game { background: #102030; color: var(--blue); border: 1px solid #1a3a50; }
+  .badge-food { background: #201408; color: #f0a060; border: 1px solid #402808; }
+  .badge-drink { background: #082018; color: var(--success); border: 1px solid #103828; }
+
+  .item-prices { display: flex; flex-direction: column; gap: 3px; }
+  .price-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; }
+  .price-tier-label { color: var(--muted); }
+  .price-val { font-weight: 500; }
+  .price-mm1 { color: var(--mm1); }
+  .price-mm2 { color: var(--mm2); }
+  .price-mm3 { color: var(--mm3); }
+  .price-hour { color: var(--hour); }
+  .price-half { color: var(--half); }
+  .price-fixed { color: var(--success); }
+
+  .item-notes { font-size: 0.65rem; color: var(--muted); font-style: italic; }
+
+  .no-venue { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .no-venue div { font-size: 2.5rem; margin-bottom: 12px; }
+  .no-items { color: var(--muted); font-size: 0.82rem; padding: 20px 0; }
+
+  /* RIGHT — BASKET / TILL */
+  .till {
+    width: 360px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-left: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .till-header {
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .till-title { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--text); }
+  .till-count { font-size: 0.7rem; color: var(--muted); }
+
+  .basket { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+
+  .basket-empty { text-align: center; padding: 40px 16px; color: var(--muted); font-size: 0.8rem; }
+  .basket-empty div { font-size: 2rem; margin-bottom: 10px; }
+
+  .basket-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 6px;
+    animation: fadeIn 0.15s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+
+  .basket-item-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .basket-item-name { font-family: 'Syne', sans-serif; font-size: 0.8rem; font-weight: 700; line-height: 1.2; flex: 1; }
+  .basket-item-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; padding: 0; line-height: 1; transition: color 0.1s; flex-shrink: 0; }
+  .basket-item-remove:hover { color: var(--accent2); }
+
+  .basket-item-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .basket-tier-tag { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 2px; background: #102030; color: var(--blue); }
+  .basket-tier-mm1 { background: #201a00; color: var(--mm1); }
+  .basket-tier-mm2 { background: #201000; color: var(--mm2); }
+  .basket-tier-mm3 { background: #200010; color: var(--mm3); }
+  .basket-tier-hour { background: #1a0a30; color: var(--hour); }
+  .basket-tier-half { background: #0a0a28; color: var(--half); }
+  .basket-tier-fixed { background: #002010; color: var(--success); }
+
+  .basket-qty-row { display: flex; align-items: center; gap: 6px; }
+  .qty-label { font-size: 0.65rem; color: var(--muted); }
+  .qty-ctrl { display: flex; align-items: center; gap: 4px; }
+  .qty-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); width: 24px; height: 24px; border-radius: 3px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+  .qty-btn:hover { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .qty-val { font-size: 0.82rem; font-weight: 500; min-width: 22px; text-align: center; }
+  .basket-subtotal { font-size: 0.8rem; font-weight: 500; color: var(--accent); text-align: right; }
+
+  /* TILL FOOTER */
+  .till-footer { border-top: 2px solid var(--border); flex-shrink: 0; }
+
+  .discount-section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .discount-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
+  .discount-row { display: flex; gap: 6px; }
+  .discount-input { flex: 1; background: var(--surface2); border: 1.5px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.8rem; padding: 7px 10px; border-radius: 3px; outline: none; text-transform: uppercase; }
+  .discount-input:focus { border-color: var(--accent); }
+  .apply-btn { font-family: 'DM Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 7px 12px; border: 1.5px solid var(--accent); background: transparent; color: var(--accent); border-radius: 3px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .apply-btn:hover { background: var(--accent); color: #000; }
+  .discount-status { font-size: 0.68rem; margin-top: 5px; height: 14px; }
+  .discount-ok { color: var(--success); }
+  .discount-err { color: var(--accent2); }
+
+  .totals-section { padding: 14px 16px; }
+  .total-line { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; margin-bottom: 6px; }
+  .total-line .label { color: var(--muted); }
+  .total-line .val { font-weight: 500; }
+  .total-line.grand { font-family: 'Syne', sans-serif; font-size: 1.15rem; font-weight: 800; color: var(--accent); border-top: 1px solid var(--border); padding-top: 10px; margin-top: 6px; }
+  .discount-line { color: var(--success); }
+
+  .till-actions { padding: 12px 16px; display: flex; gap: 8px; }
+  .btn-clear { flex: 1; font-family: 'DM Mono', monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 10px; border: 1.5px solid var(--accent2); background: transparent; color: var(--accent2); border-radius: 3px; cursor: pointer; transition: all 0.15s; }
+  .btn-clear:hover { background: var(--accent2); color: #fff; }
+  .btn-charge { flex: 2; font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 10px; background: var(--success); border: none; color: #000; border-radius: 3px; cursor: pointer; transition: all 0.15s; }
+  .btn-charge:hover { background: #60f4c0; }
+  .btn-charge:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ITEM SELECTION MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1.5px solid var(--border); border-top: 3px solid var(--blue); border-radius: 4px; width: 100%; max-width: 480px; padding: 24px; animation: slideUp 0.2s ease; }
+  @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal h2 { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .modal-sub { font-size: 0.72rem; color: var(--muted); margin-bottom: 20px; }
+
+  .tier-btns { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .tier-section-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
+
+  .tier-btn-group { display: flex; gap: 8px; }
+  .tier-btn {
+    flex: 1; font-family: 'DM Mono', monospace; font-size: 0.75rem; padding: 10px 8px;
+    border: 1.5px solid var(--border); border-radius: 3px; background: var(--surface2);
+    color: var(--text); cursor: pointer; transition: all 0.15s; text-align: center;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .tier-btn-name { font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 700; }
+  .tier-btn-price { font-size: 0.8rem; font-weight: 500; }
+  .tier-btn:hover:not(:disabled) { border-color: var(--blue); background: #102030; }
+  .tier-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .tier-btn.mm1:hover:not(:disabled) { border-color: var(--mm1); } .tier-btn.mm1 .tier-btn-price { color: var(--mm1); }
+  .tier-btn.mm2:hover:not(:disabled) { border-color: var(--mm2); } .tier-btn.mm2 .tier-btn-price { color: var(--mm2); }
+  .tier-btn.mm3:hover:not(:disabled) { border-color: var(--mm3); } .tier-btn.mm3 .tier-btn-price { color: var(--mm3); }
+  .tier-btn.hour-btn:hover:not(:disabled) { border-color: var(--hour); } .tier-btn.hour-btn .tier-btn-price { color: var(--hour); }
+  .tier-btn.half-btn:hover:not(:disabled) { border-color: var(--half); } .tier-btn.half-btn .tier-btn-price { color: var(--half); }
+  .tier-btn.fixed-btn:hover:not(:disabled) { border-color: var(--success); } .tier-btn.fixed-btn .tier-btn-price { color: var(--success); }
+
+  .modal-cancel { font-family: 'DM Mono', monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 16px; border: 1.5px solid var(--border); background: transparent; color: var(--muted); border-radius: 3px; cursor: pointer; transition: all 0.15s; }
+  .modal-cancel:hover { color: var(--text); border-color: var(--muted); }
+
+  /* CHARGED MODAL */
+  .charged-modal { text-align: center; }
+  .charged-icon { font-size: 3rem; margin-bottom: 12px; }
+  .charged-total { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--success); margin-bottom: 6px; }
+  .charged-sub { font-size: 0.75rem; color: var(--muted); margin-bottom: 20px; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--success); color: #000; font-family: 'DM Mono', monospace; font-size: 0.78rem; font-weight: 500; padding: 10px 18px; border-radius: 3px; z-index: 2000; opacity: 0; transition: all 0.25s; white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .main { flex-direction: column; }
+    .till { width: 100%; border-left: none; border-top: 2px solid var(--border); max-height: 50vh; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>PAP <span>TILL</span></h1>
+    <a href="pricing-db.html" class="nav-link">⇐ Database</a>
+  </div>
+  <div id="venueBadge" style="font-size:0.75rem;color:var(--muted)">No venue selected</div>
+</header>
+
+<div class="venue-bar">
+  <label>Select Venue:</label>
+  <select id="venueSelect" onchange="onVenueChange()">
+    <option value="">— Choose a venue —</option>
+  </select>
+  <div style="display:flex;gap:8px;flex-wrap:wrap" id="catTabsWrap">
+    <button class="cat-tab active" data-cat="All" onclick="setCat(this)">All</button>
+    <button class="cat-tab" data-cat="Game" onclick="setCat(this)">🎮 Games</button>
+    <button class="cat-tab" data-cat="Food" onclick="setCat(this)">🍕 Food</button>
+    <button class="cat-tab" data-cat="Drink" onclick="setCat(this)">🥤 Drinks</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- BROWSER -->
+  <div class="browser">
+    <div class="browser-search">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="itemSearch" placeholder="Search items..." oninput="renderBrowser()">
+    </div>
+
+    <div id="browserContent">
+      <div class="no-venue"><div>🏟</div><p>Select a venue above to see pricing</p></div>
+    </div>
+  </div>
+
+  <!-- TILL -->
+  <div class="till">
+    <div class="till-header">
+      <span class="till-title">Order</span>
+      <span class="till-count" id="basketCount">0 items</span>
+    </div>
+
+    <div class="basket" id="basket">
+      <div class="basket-empty"><div>🛒</div><p>Add items from the left</p></div>
+    </div>
+
+    <div class="till-footer">
+      <div class="discount-section">
+        <div class="discount-label">Discount Code</div>
+        <div class="discount-row">
+          <input type="text" class="discount-input" id="discountCode" placeholder="ENTER CODE" oninput="clearDiscount()">
+          <button class="apply-btn" onclick="applyDiscount()">Apply</button>
+        </div>
+        <div class="discount-status" id="discountStatus"></div>
+      </div>
+
+      <div class="totals-section">
+        <div class="total-line">
+          <span class="label">Subtotal</span>
+          <span class="val" id="subtotal">£0.00</span>
+        </div>
+        <div class="total-line discount-line" id="discountLine" style="display:none">
+          <span class="label" id="discountLabel">Discount</span>
+          <span class="val" id="discountVal">-£0.00</span>
+        </div>
+        <div class="total-line grand">
+          <span>TOTAL</span>
+          <span id="grandTotal">£0.00</span>
+        </div>
+      </div>
+
+      <div class="till-actions">
+        <button class="btn-clear" onclick="clearBasket()">Clear</button>
+        <button class="btn-charge" id="chargeBtn" onclick="charge()" disabled>Charge ›</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ITEM SELECTION MODAL -->
+<div class="modal-overlay" id="itemModal">
+  <div class="modal">
+    <h2 id="modalItemName">Item Name</h2>
+    <div class="modal-sub" id="modalItemSub">Select tier and customer type</div>
+    <div class="tier-btns" id="modalTierBtns"></div>
+    <button class="modal-cancel" onclick="closeItemModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- CHARGED MODAL -->
+<div class="modal-overlay" id="chargedModal">
+  <div class="modal charged-modal">
+    <div class="charged-icon">✅</div>
+    <div class="charged-total" id="chargedTotal">£0.00</div>
+    <div class="charged-sub">Transaction complete</div>
+    <button class="btn-charge" style="width:100%;padding:12px" onclick="newTransaction()">New Transaction</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+// ── SUPABASE ──
+const SUPABASE_URL = 'https://qbmewgypsyupvykggegp.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFibWV3Z3lwc3l1cHZ5a2dnZWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2ODY2NDQsImV4cCI6MjA4OTI2MjY0NH0.o43MzHBf3fo2xpocmYIIXcq-cdg7vamkFYDfP5uyqt0';
+
+async function sbFetch(path, method='GET', body=null) {
+  const opts = { method, headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, opts);
+  if (!res.ok) throw new Error(await res.text());
+  return res.status === 204 ? null : res.json();
+}
+
+async function sbLoadKey(key, def=null) {
+  try {
+    const rows = await sbFetch(`settings?key=eq.${encodeURIComponent(key)}&select=value&limit=1`);
+    if (!rows?.length) return def;
+    return JSON.parse(rows[0].value);
+  } catch(e) { return def; }
+}
+
+async function sbSaveKey(key, value) {
+  try { await sbFetch('settings', 'POST', [{ key, value: JSON.stringify(value) }]); }
+  catch(e) { try { await sbFetch(`settings?key=eq.${encodeURIComponent(key)}`, 'PATCH', { value: JSON.stringify(value) }); } catch(e2) {} }
+}
+
+const STORAGE_KEY = 'venuePricingDB_v3';
+const VENUE_KEY = 'venuePricingVenues_v2';
+
+let allData = [], venues = [], basket = [], selectedVenue = '', activeCat = 'All';
+let discountApplied = null;
+let pendingItem = null;
+
+// KNOWN DISCOUNT CODES — add yours here
+const DISCOUNT_CODES = {
+  '10':   { type: 'pct', value: 10,  label: '10% Discount' },
+  '20':     { type: 'pct', value: 20,  label: '20% Discount' },
+'50':   { type: 'pct', value: 50,  label: '50% Discount' },
+  '100':     { type: 'pct', value: 100,  label: '100% Discount' },
+  'SAVE5':     { type: 'fixed', value: 5, label: '£5 Off' },
+  'WELCOME10': { type: 'fixed', value: 10,label: '£10 Welcome Discount' },
+};
+
+async function load() {
+  try {
+    const sbData   = await sbLoadKey('till_products', null);
+    const sbVenues = await sbLoadKey('till_venues', null);
+    allData = sbData   !== null ? sbData   : (JSON.parse(localStorage.getItem(STORAGE_KEY)) || []);
+    venues  = sbVenues !== null ? sbVenues : (JSON.parse(localStorage.getItem(VENUE_KEY)) || []);
+  } catch(e) {
+    allData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    venues  = JSON.parse(localStorage.getItem(VENUE_KEY)) || [];
+  }
+}
+
+function renderVenueDropdown() {
+  const sel = document.getElementById('venueSelect');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Choose a venue —</option>';
+  venues.forEach(v => { const o = new Option(v,v); if(v===cur) o.selected=true; sel.appendChild(o); });
+}
+
+function onVenueChange() {
+  selectedVenue = document.getElementById('venueSelect').value;
+  document.getElementById('venueBadge').textContent = selectedVenue || 'No venue selected';
+  document.getElementById('venueBadge').style.color = selectedVenue ? 'var(--accent)' : 'var(--muted)';
+  clearBasket(true);
+  renderBrowser();
+}
+
+function setCat(btn) {
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  activeCat = btn.dataset.cat;
+  renderBrowser();
+}
+
+function renderBrowser() {
+  const content = document.getElementById('browserContent');
+  if (!selectedVenue) {
+    content.innerHTML = '<div class="no-venue"><div>🏟</div><p>Select a venue above to see pricing</p></div>';
+    return;
+  }
+
+  const search = document.getElementById('itemSearch').value.toLowerCase();
+  let items = allData.filter(r =>
+    (r.venues || (r.venue ? [r.venue] : [])).includes(selectedVenue)
+    && (activeCat === 'All' || r.category === activeCat)
+    && (!search || r.name.toLowerCase().includes(search))
+  );
+
+  if (!items.length) {
+    content.innerHTML = '<div class="no-items">No items found for this venue.</div>';
+    return;
+  }
+
+  // Group by category
+  const groups = {};
+  items.forEach(r => (groups[r.category] = groups[r.category] || []).push(r));
+  const catOrder = ['Game','Food','Drink'];
+
+  content.innerHTML = '';
+  catOrder.forEach(cat => {
+    if (!groups[cat]) return;
+    const section = document.createElement('div');
+    const heading = document.createElement('div');
+    heading.className = 'section-heading';
+    heading.textContent = cat === 'Game' ? '🎮 Games' : cat === 'Food' ? '🍕 Food Packages' : '🥤 Drink Packages';
+    section.appendChild(heading);
+
+    const grid = document.createElement('div');
+    grid.className = 'items-grid';
+    groups[cat].forEach(r => grid.appendChild(makeCard(r)));
+    section.appendChild(grid);
+    content.appendChild(section);
+  });
+}
+
+function fmt(v) { return v !== '' && v !== null && v !== undefined ? `£${parseFloat(v).toFixed(2)}` : null; }
+
+function makeCard(r) {
+  const div = document.createElement('div');
+  const catCls = r.category === 'Game' ? 'game-card' : r.category === 'Food' ? 'food-card' : 'drink-card';
+  const badgeCls = r.category === 'Game' ? 'badge-game' : r.category === 'Food' ? 'badge-food' : 'badge-drink';
+
+  let priceHTML = '';
+  if (r.category === 'Game') {
+    const tiers = [
+      { key:'mm1', label:'M&M', a:r.mm1a, c:r.mm1c },
+      { key:'mm2', label:'M&M 2nd', a:r.mm2a, c:r.mm2c },
+      { key:'mm3', label:'M&M 3', a:r.mm3a, c:r.mm3c },
+    ];
+    priceHTML = tiers.map(t => {
+      const fa = fmt(t.a), fc = fmt(t.c);
+      if (!fa && !fc) return '';
+      return `<div class="price-row"><span class="price-tier-label">${t.label}</span><span class="price-val price-${t.key}">${fa||'—'} / ${fc||'—'}</span></div>`;
+    }).join('');
+    if (fmt(r.perHour)) priceHTML += `<div class="price-row"><span class="price-tier-label">Per Hour</span><span class="price-val price-hour">${fmt(r.perHour)}</span></div>`;
+    if (fmt(r.perHalf)) priceHTML += `<div class="price-row"><span class="price-tier-label">Per ½ Hour</span><span class="price-val price-half">${fmt(r.perHalf)}</span></div>`;
+  } else {
+    const f = fmt(r.fixed);
+    priceHTML = f ? `<div class="price-row"><span class="price-tier-label">Price</span><span class="price-val price-fixed">${f}</span></div>` : '';
+  }
+
+  div.className = `item-card ${catCls}`;
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">
+      <div class="item-name">${r.name}</div>
+      <span class="item-badge ${badgeCls}">${r.category}</span>
+    </div>
+    <div class="item-prices">${priceHTML}</div>
+    ${r.notes ? `<div class="item-notes">${r.notes}</div>` : ''}
+  `;
+  div.addEventListener('click', () => openItemModal(r));
+  return div;
+}
+
+// ─── ITEM MODAL ───────────────────────────────────────────────────────────────
+function openItemModal(r) {
+  pendingItem = r;
+  document.getElementById('modalItemName').textContent = r.name;
+  const btns = document.getElementById('modalTierBtns');
+  btns.innerHTML = '';
+
+  if (r.category === 'Game') {
+    document.getElementById('modalItemSub').textContent = 'Select tier and customer type';
+    const tiers = [
+      { key:'mm1', label:'Mix & Match',     a:r.mm1a, c:r.mm1c },
+      { key:'mm2', label:'Mix & Match 2nd', a:r.mm2a, c:r.mm2c },
+      { key:'mm3', label:'Mix & Match 3',   a:r.mm3a, c:r.mm3c },
+    ];
+    tiers.forEach(t => {
+      const wrap = document.createElement('div');
+      const lbl = document.createElement('div');
+      lbl.className = 'tier-section-label'; lbl.textContent = t.label;
+      const row = document.createElement('div');
+      row.className = 'tier-btn-group';
+
+      ['Adult','Child'].forEach(type => {
+        const price = type === 'Adult' ? t.a : t.c;
+        const btn = document.createElement('button');
+        btn.className = `tier-btn ${t.key}`;
+        btn.disabled = !price;
+        btn.innerHTML = `<span class="tier-btn-name">${type}</span><span class="tier-btn-price">${price ? '£'+parseFloat(price).toFixed(2) : '—'}</span>`;
+        if (price) btn.addEventListener('click', () => addToBasket(r, t.label, type, parseFloat(price)));
+        row.appendChild(btn);
+      });
+      wrap.appendChild(lbl);
+      wrap.appendChild(row);
+      btns.appendChild(wrap);
+    });
+
+    // Hourly rates
+    if (r.perHour || r.perHalf) {
+      const wrap = document.createElement('div');
+      const lbl = document.createElement('div');
+      lbl.className = 'tier-section-label'; lbl.textContent = 'Hourly Rates';
+      const row = document.createElement('div');
+      row.className = 'tier-btn-group';
+
+      if (r.perHour) {
+        const btn = document.createElement('button');
+        btn.className = 'tier-btn hour-btn';
+        btn.innerHTML = `<span class="tier-btn-name">Per Hour</span><span class="tier-btn-price">£${parseFloat(r.perHour).toFixed(2)}</span>`;
+        btn.addEventListener('click', () => addToBasket(r, 'Per Hour', '', parseFloat(r.perHour)));
+        row.appendChild(btn);
+      }
+      if (r.perHalf) {
+        const btn = document.createElement('button');
+        btn.className = 'tier-btn half-btn';
+        btn.innerHTML = `<span class="tier-btn-name">Per ½ Hour</span><span class="tier-btn-price">£${parseFloat(r.perHalf).toFixed(2)}</span>`;
+        btn.addEventListener('click', () => addToBasket(r, 'Per Half Hour', '', parseFloat(r.perHalf)));
+        row.appendChild(btn);
+      }
+      wrap.appendChild(lbl);
+      wrap.appendChild(row);
+      btns.appendChild(wrap);
+    }
+  } else {
+    document.getElementById('modalItemSub').textContent = 'Fixed price — tap to add';
+    const price = r.fixed;
+    const btn = document.createElement('button');
+    btn.className = 'tier-btn fixed-btn';
+    btn.disabled = !price;
+    btn.innerHTML = `<span class="tier-btn-name">${r.name}</span><span class="tier-btn-price">${price ? '£'+parseFloat(price).toFixed(2) : 'No price set'}</span>`;
+    if (price) btn.addEventListener('click', () => addToBasket(r, '', '', parseFloat(price)));
+    btns.appendChild(btn);
+  }
+
+  document.getElementById('itemModal').classList.add('open');
+}
+
+function closeItemModal() { document.getElementById('itemModal').classList.remove('open'); pendingItem = null; }
+
+// ─── BASKET ───────────────────────────────────────────────────────────────────
+function addToBasket(item, tier, customerType, price) {
+  closeItemModal();
+  // Check if identical line already exists — increment qty
+  const existing = basket.find(b => b.itemId === item.id && b.tier === tier && b.customerType === customerType);
+  if (existing) { existing.qty++; }
+  else {
+    basket.push({ id: Date.now().toString(36), itemId: item.id, name: item.name, tier, customerType, price, qty: 1, category: item.category });
+  }
+  renderBasket();
+  showToast(`${item.name} added`);
+}
+
+function renderBasket() {
+  const el = document.getElementById('basket');
+  el.innerHTML = '';
+
+  if (!basket.length) {
+    el.innerHTML = '<div class="basket-empty"><div>🛒</div><p>Add items from the left</p></div>';
+    document.getElementById('basketCount').textContent = '0 items';
+    updateTotals(); return;
+  }
+
+  basket.forEach(b => {
+    const div = document.createElement('div');
+    div.className = 'basket-item';
+
+    const tierClass = b.tier === 'Per Hour' ? 'basket-tier-hour' : b.tier === 'Per Half Hour' ? 'basket-tier-half' : b.tier.includes('2nd') ? 'basket-tier-mm2' : b.tier.includes('3') ? 'basket-tier-mm3' : b.tier ? 'basket-tier-mm1' : 'basket-tier-fixed';
+    const tierLabel = b.tier ? `${b.tier}${b.customerType ? ' · '+b.customerType : ''}` : b.category;
+
+    div.innerHTML = `
+      <div class="basket-item-top">
+        <div class="basket-item-name">${b.name}</div>
+        <button class="basket-item-remove" onclick="removeFromBasket('${b.id}')">✕</button>
+      </div>
+      <div class="basket-item-meta">
+        <span class="basket-tier-tag ${tierClass}">${tierLabel}</span>
+        <span style="font-size:0.72rem;color:var(--muted)">£${b.price.toFixed(2)} ea</span>
+      </div>
+      <div class="basket-qty-row">
+        <span class="qty-label">Qty:</span>
+        <div class="qty-ctrl">
+          <button class="qty-btn" onclick="changeQty('${b.id}',-1)">−</button>
+          <span class="qty-val">${b.qty}</span>
+          <button class="qty-btn" onclick="changeQty('${b.id}',1)">+</button>
+        </div>
+        <span class="basket-subtotal" style="flex:1;text-align:right">£${(b.price * b.qty).toFixed(2)}</span>
+      </div>`;
+    el.appendChild(div);
+  });
+
+  const total = basket.reduce((s,b) => s + b.price*b.qty, 0);
+  document.getElementById('basketCount').textContent = `${basket.reduce((s,b)=>s+b.qty,0)} item(s)`;
+  updateTotals();
+}
+
+function removeFromBasket(id) {
+  basket = basket.filter(b => b.id !== id);
+  renderBasket();
+}
+
+function changeQty(id, delta) {
+  const item = basket.find(b => b.id === id);
+  if (!item) return;
+  item.qty = Math.max(1, item.qty + delta);
+  renderBasket();
+}
+
+function clearBasket(silent=false) {
+  basket = [];
+  discountApplied = null;
+  document.getElementById('discountCode').value = '';
+  document.getElementById('discountStatus').textContent = '';
+  document.getElementById('discountStatus').className = 'discount-status';
+  renderBasket();
+  if (!silent) showToast('Order cleared');
+}
+
+function updateTotals() {
+  const subtotal = basket.reduce((s,b) => s + b.price*b.qty, 0);
+  document.getElementById('subtotal').textContent = `£${subtotal.toFixed(2)}`;
+
+  let discount = 0;
+  if (discountApplied && subtotal > 0) {
+    if (discountApplied.type === 'pct') discount = subtotal * discountApplied.value / 100;
+    else discount = Math.min(discountApplied.value, subtotal);
+    document.getElementById('discountLine').style.display = 'flex';
+    document.getElementById('discountLabel').textContent = discountApplied.label;
+    document.getElementById('discountVal').textContent = `-£${discount.toFixed(2)}`;
+  } else {
+    document.getElementById('discountLine').style.display = 'none';
+  }
+
+  const grand = Math.max(0, subtotal - discount);
+  document.getElementById('grandTotal').textContent = `£${grand.toFixed(2)}`;
+  document.getElementById('chargeBtn').disabled = basket.length === 0;
+}
+
+// ─── DISCOUNT ─────────────────────────────────────────────────────────────────
+function applyDiscount() {
+  const code = document.getElementById('discountCode').value.trim().toUpperCase();
+  const status = document.getElementById('discountStatus');
+  if (!code) return;
+  const disc = DISCOUNT_CODES[code];
+  if (disc) {
+    discountApplied = disc;
+    status.textContent = `✓ ${disc.label} applied`;
+    status.className = 'discount-status discount-ok';
+  } else {
+    discountApplied = null;
+    status.textContent = '✕ Invalid code';
+    status.className = 'discount-status discount-err';
+  }
+  updateTotals();
+}
+
+function clearDiscount() {
+  if (discountApplied) {
+    discountApplied = null;
+    document.getElementById('discountStatus').textContent = '';
+    document.getElementById('discountStatus').className = 'discount-status';
+    updateTotals();
+  }
+}
+
+// ─── CHARGE ───────────────────────────────────────────────────────────────────
+function charge() {
+  const total = document.getElementById('grandTotal').textContent;
+  document.getElementById('chargedTotal').textContent = total;
+  document.getElementById('chargedModal').classList.add('open');
+}
+
+function newTransaction() {
+  document.getElementById('chargedModal').classList.remove('open');
+  clearBasket(true);
+  showToast('Ready for next customer');
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// ─── CLOSE MODALS ON BACKDROP ─────────────────────────────────────────────────
+document.getElementById('itemModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeItemModal(); });
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+(async () => {
+  await load();
+  renderVenueDropdown();
+  renderBrowser();
+  updateTotals();
+})();
+
+// Reload data if localStorage changes (e.g. db page updates)
+window.addEventListener('storage', async () => { await load(); renderVenueDropdown(); renderBrowser(); });
+</script>
+</body>
+</html>

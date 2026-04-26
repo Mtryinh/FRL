@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAP Pricing DB — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0f; --surface: #16161a; --surface2: #1e1e24; --border: #2a2a35;
+    --accent: #f0c040; --accent2: #e05a5a; --accent3: #5ad4e0; --text: #f0ede8;
+    --muted: #7a7a8a; --success: #5ae0a0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; }
+
+  header { background: var(--surface); border-bottom: 2px solid var(--accent); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+  .header-left { display: flex; align-items: center; gap: 20px; }
+  header h1 { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; color: var(--accent); letter-spacing: -0.02em; }
+  header h1 span { color: var(--text); }
+  .nav-link { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); text-decoration: none; padding: 6px 12px; border: 1px solid var(--border); border-radius: 3px; transition: all 0.15s; }
+  .nav-link:hover { color: var(--accent3); border-color: var(--accent3); }
+  .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  .btn { font-family: 'DM Mono', monospace; font-size: 0.75rem; font-weight: 500; padding: 8px 16px; border: 1.5px solid; cursor: pointer; transition: all 0.15s; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 3px; }
+  .btn-primary { background: var(--accent); color: #000; border-color: var(--accent); }
+  .btn-primary:hover { background: #ffd060; }
+  .btn-secondary { background: transparent; color: var(--accent3); border-color: var(--accent3); }
+  .btn-secondary:hover { background: var(--accent3); color: #000; }
+  .btn-danger { background: transparent; color: var(--accent2); border-color: var(--accent2); }
+  .btn-danger:hover { background: var(--accent2); color: #fff; }
+  .btn-ghost { background: transparent; color: var(--muted); border-color: var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+  .btn-purple { background: transparent; color: #c084fc; border-color: #c084fc; }
+  .btn-purple:hover { background: #c084fc; color: #000; }
+  .btn-sm { padding: 5px 10px; font-size: 0.68rem; }
+
+  .container { max-width: 1600px; margin: 0 auto; padding: 24px 32px; }
+  .controls { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .search-wrap { position: relative; flex: 1; min-width: 200px; }
+  .search-wrap input { width: 100%; background: var(--surface); border: 1.5px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.85rem; padding: 10px 16px 10px 36px; border-radius: 3px; outline: none; transition: border-color 0.15s; }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  select { background: var(--surface); border: 1.5px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.82rem; padding: 10px 14px; border-radius: 3px; outline: none; cursor: pointer; transition: border-color 0.15s; }
+  select:focus { border-color: var(--accent); }
+
+  .stats-bar { display: flex; gap: 24px; margin-bottom: 20px; padding: 14px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; flex-wrap: wrap; }
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat-val { font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+  .stat-lbl { font-size: 0.65rem; text-transform: uppercase; color: var(--muted); letter-spacing: 0.08em; }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  thead { background: var(--surface2); border-bottom: 2px solid var(--accent); }
+  th { font-family: 'Syne', sans-serif; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); padding: 11px 12px; text-align: left; white-space: nowrap; }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--accent); }
+  th.tier-header { color: var(--accent3); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr { background: var(--surface); transition: background 0.1s; }
+  tbody tr:nth-child(even) { background: #131317; }
+  tbody tr:hover { background: var(--surface2); }
+
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 2px; font-size: 0.62rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
+  .badge-game  { background: #1a2a3a; color: var(--accent3); border: 1px solid #2a4a5a; }
+  .badge-food  { background: #2a1a1a; color: #f0a080;        border: 1px solid #4a2a2a; }
+  .badge-drink { background: #1a2a1a; color: var(--success);  border: 1px solid #2a4a2a; }
+
+  .venue-tags { display: flex; flex-wrap: wrap; gap: 4px; min-width: 100px; }
+  .venue-tag  { display: inline-block; padding: 2px 7px; border-radius: 2px; font-size: 0.6rem; background: #1a1800; color: var(--accent); border: 1px solid #3a3400; white-space: nowrap; }
+  .venue-tag.multi { background: #102018; color: var(--success); border-color: #204030; }
+
+  .price    { font-weight: 500; color: var(--accent); }
+  .price-na { color: var(--border); font-size: 0.72rem; }
+  .action-btns { display: flex; gap: 4px; white-space: nowrap; }
+
+  .venue-header td { background: var(--surface2) !important; border-bottom: 1px solid var(--border); border-top: 2px solid var(--accent3); padding: 7px 12px; cursor: pointer; user-select: none; }
+  .venue-header td:hover { background: #1a2a3a !important; }
+  .venue-header-label { font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 700; color: var(--accent3); text-transform: uppercase; letter-spacing: 0.1em; display: flex; align-items: center; gap: 8px; }
+  .group-chevron { display: inline-block; transition: transform 0.2s ease; font-style: normal; }
+  .group-chevron.collapsed { transform: rotate(-90deg); }
+  .group-row.hidden { display: none; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state div { font-size: 2.5rem; margin-bottom: 12px; }
+  .empty-state p { font-size: 0.85rem; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1.5px solid var(--border); border-top: 3px solid var(--accent); border-radius: 4px; width: 100%; max-width: 720px; max-height: 92vh; overflow-y: auto; padding: 28px; animation: slideUp 0.2s ease; }
+  @keyframes slideUp { from { transform: translateY(18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal h2 { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; color: var(--accent); }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1/-1; }
+  label { font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+  input[type="text"], input[type="number"], textarea, select.form-select {
+    background: var(--surface2); border: 1.5px solid var(--border); color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 0.82rem; padding: 9px 12px; border-radius: 3px;
+    outline: none; transition: border-color 0.15s; width: 100%;
+  }
+  input:focus, textarea:focus, select.form-select:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 55px; }
+
+  /* VENUE CHECKBOXES */
+  .venue-check-section { background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 14px; margin-bottom: 14px; }
+  .venue-check-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .venue-check-title { font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .sel-all-btn { font-family: 'DM Mono', monospace; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); border-radius: 2px; cursor: pointer; transition: all 0.15s; }
+  .sel-all-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .venue-checkboxes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .vc-label { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 3px; cursor: pointer; font-size: 0.8rem; user-select: none; transition: all 0.15s; }
+  .vc-label:hover:not(.disabled-label) { border-color: var(--accent); color: var(--accent); }
+  .vc-label.checked { border-color: var(--accent); background: #1a1800; color: var(--accent); }
+  .vc-label.disabled-label { border-color: var(--success); background: #102018; color: var(--success); cursor: default; opacity: 0.8; }
+  .vc-label input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+  .no-venues-msg { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+
+  .price-section { background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 16px; margin-bottom: 14px; }
+  .price-section-title { font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 14px; }
+  .tier-block { margin-bottom: 14px; }
+  .tier-block:last-child { margin-bottom: 0; }
+  .tier-label { font-size: 0.68rem; font-family: 'Syne', sans-serif; color: var(--accent3); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  .tier-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+  .copy-info { font-size: 0.8rem; color: var(--muted); margin-bottom: 14px; line-height: 1.6; }
+  .copy-info strong { color: var(--text); }
+
+  .venue-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .venue-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; }
+  .venue-item span { flex: 1; font-size: 0.85rem; }
+  .add-venue-row { display: flex; gap: 8px; }
+  .add-venue-row input { flex: 1; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--success); color: #000; font-family: 'DM Mono', monospace; font-size: 0.78rem; font-weight: 500; padding: 12px 18px; border-radius: 3px; z-index: 2000; transform: translateY(80px); opacity: 0; transition: all 0.25s; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } .container { padding: 16px; } .tier-prices { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>PAP <span>PRICING DB</span></h1>
+    <a href="till.html" class="nav-link">⇒ Till Page</a>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost" onclick="openVenueManager()">⚙ Manage Venues</button>
+    <button class="btn btn-secondary" onclick="openModal()">+ Add Entry</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="controls">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="searchInput" placeholder="Search name, venue, category..." oninput="renderTable()">
+    </div>
+    <select id="venueFilter" onchange="renderTable()"><option value="">All Venues</option></select>
+    <select id="catFilter" onchange="renderTable()">
+      <option value="">All Categories</option>
+      <option value="Game">Games</option>
+      <option value="Food">Food Packages</option>
+      <option value="Drink">Drink Packages</option>
+    </select>
+    <select id="groupBy" onchange="renderTable()">
+      <option value="venue">Group by Venue</option>
+      <option value="category">Group by Category</option>
+      <option value="none">No Grouping</option>
+    </select>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat"><span class="stat-val" id="stat-entries">0</span><span class="stat-lbl">Entries</span></div>
+    <div class="stat"><span class="stat-val" id="stat-venues">0</span><span class="stat-lbl">Venues</span></div>
+    <div class="stat"><span class="stat-val" id="stat-games">0</span><span class="stat-lbl">Games</span></div>
+    <div class="stat"><span class="stat-val" id="stat-packages">0</span><span class="stat-lbl">Packages</span></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="sortable" onclick="setSort('name')">Name <span id="sort-name"></span></th>
+          <th>Category</th>
+          <th>Venues</th>
+          <th class="tier-header">M&M Adult</th>
+          <th class="tier-header">M&M Child</th>
+          <th class="tier-header">M&M 2nd Adult</th>
+          <th class="tier-header">M&M 2nd Child</th>
+          <th class="tier-header">M&M 3 Adult</th>
+          <th class="tier-header">M&M 3 Child</th>
+          <th class="tier-header" style="color:#c084fc">Per Hour</th>
+          <th class="tier-header" style="color:#c084fc">Per ½ Hr</th>
+          <th>Fixed Price</th>
+          <th>Notes</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ADD / EDIT MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2 id="modalTitle">Add New Entry</h2>
+
+    <div class="venue-check-section">
+      <div class="venue-check-header">
+        <span class="venue-check-title">Assign to Venues *</span>
+        <button class="sel-all-btn" onclick="toggleSelectAll('venueCheckboxes')">Select All</button>
+      </div>
+      <div class="venue-checkboxes" id="venueCheckboxes"></div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Category *</label>
+        <select class="form-select" id="fCat" onchange="toggleCatFields()">
+          <option value="Game">Game</option>
+          <option value="Food">Food Package</option>
+          <option value="Drink">Drink Package</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Name *</label>
+        <input type="text" id="fName" placeholder="e.g. Laser Tag, Pizza Package...">
+      </div>
+    </div>
+
+    <div id="gamePrices" class="price-section">
+      <div class="price-section-title">Mix &amp; Match Pricing (£) — per person</div>
+      <div class="tier-block">
+        <div class="tier-label">Mix &amp; Match</div>
+        <div class="tier-prices">
+          <div class="form-group"><label>Adult</label><input type="number" id="fMM1A" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="form-group"><label>Child</label><input type="number" id="fMM1C" min="0" step="0.01" placeholder="0.00"></div>
+        </div>
+      </div>
+      <div class="tier-block">
+        <div class="tier-label">Mix &amp; Match 2nd</div>
+        <div class="tier-prices">
+          <div class="form-group"><label>Adult</label><input type="number" id="fMM2A" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="form-group"><label>Child</label><input type="number" id="fMM2C" min="0" step="0.01" placeholder="0.00"></div>
+        </div>
+      </div>
+      <div class="tier-block">
+        <div class="tier-label">Mix &amp; Match 3</div>
+        <div class="tier-prices">
+          <div class="form-group"><label>Adult</label><input type="number" id="fMM3A" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="form-group"><label>Child</label><input type="number" id="fMM3C" min="0" step="0.01" placeholder="0.00"></div>
+        </div>
+      </div>
+      <div class="tier-block">
+        <div class="tier-label" style="color:#c084fc">Hourly Rates</div>
+        <div class="tier-prices">
+          <div class="form-group"><label>Per Hour</label><input type="number" id="fPerHour" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="form-group"><label>Per Half Hour</label><input type="number" id="fPerHalf" min="0" step="0.01" placeholder="0.00"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="fixedPrice" class="price-section" style="display:none">
+      <div class="price-section-title">Pricing (£)</div>
+      <div class="tier-prices">
+        <div class="form-group"><label>Fixed Price (per person)</label><input type="number" id="fFixed" min="0" step="0.01" placeholder="0.00"></div>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Notes</label>
+        <textarea id="fNotes" placeholder="Min group size, inclusions, restrictions..."></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEntry()">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- COPY TO VENUES MODAL -->
+<div class="modal-overlay" id="copyModal">
+  <div class="modal" style="max-width:500px;border-top-color:#c084fc">
+    <h2 style="color:#c084fc">Copy to Venues</h2>
+    <p class="copy-info">Select additional venues to assign <strong id="copyItemName"></strong> to. Its current venues are already ticked and locked.</p>
+    <div class="venue-check-section">
+      <div class="venue-check-header">
+        <span class="venue-check-title">Additional Venues</span>
+        <button class="sel-all-btn" onclick="toggleSelectAll('copyVenueCheckboxes')">Select Unassigned</button>
+      </div>
+      <div class="venue-checkboxes" id="copyVenueCheckboxes"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCopyModal()">Cancel</button>
+      <button class="btn btn-purple" onclick="executeCopy()">Copy to Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- VENUE MANAGER -->
+<div class="modal-overlay" id="venueModal">
+  <div class="modal" style="max-width:480px">
+    <h2>Manage Venues</h2>
+    <div class="venue-list" id="venueList"></div>
+    <div class="add-venue-row">
+      <input type="text" id="newVenueName" placeholder="New venue name..." onkeydown="if(event.key==='Enter')addVenue()">
+      <button class="btn btn-primary" onclick="addVenue()">Add</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeVenueModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+// ── SUPABASE ──
+const SUPABASE_URL = 'https://qbmewgypsyupvykggegp.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFibWV3Z3lwc3l1cHZ5a2dnZWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2ODY2NDQsImV4cCI6MjA4OTI2MjY0NH0.o43MzHBf3fo2xpocmYIIXcq-cdg7vamkFYDfP5uyqt0';
+
+async function sbFetch(path, method='GET', body=null) {
+  const opts = { method, headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, opts);
+  if (!res.ok) throw new Error(await res.text());
+  return res.status === 204 ? null : res.json();
+}
+
+async function sbLoadKey(key, def=null) {
+  try {
+    const rows = await sbFetch(`settings?key=eq.${encodeURIComponent(key)}&select=value&limit=1`);
+    if (!rows?.length) return def;
+    return JSON.parse(rows[0].value);
+  } catch(e) { return def; }
+}
+
+async function sbSaveKey(key, value) {
+  try { await sbFetch('settings', 'POST', [{ key, value: JSON.stringify(value) }]); }
+  catch(e) { try { await sbFetch(`settings?key=eq.${encodeURIComponent(key)}`, 'PATCH', { value: JSON.stringify(value) }); } catch(e2) {} }
+}
+
+const STORAGE_KEY = 'venuePricingDB_v3';
+const VENUE_KEY   = 'venuePricingVenues_v2';
+
+let data = [], venues = [], editId = null, copyId = null, sortCol = 'name', sortDir = 1;
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// ── LOAD / SAVE ───────────────────────────────────────────────────────────────
+async function load() {
+  // Try Supabase first, fall back to localStorage
+  try {
+    const sbData   = await sbLoadKey('till_products', null);
+    const sbVenues = await sbLoadKey('till_venues', null);
+    data   = sbData   !== null ? sbData   : (JSON.parse(localStorage.getItem(STORAGE_KEY)) || []);
+    venues = sbVenues !== null ? sbVenues : (JSON.parse(localStorage.getItem(VENUE_KEY)) || []);
+  } catch(e) {
+    data   = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    venues = JSON.parse(localStorage.getItem(VENUE_KEY)) || [];
+  }
+  // Migrate old single-venue string to venues array
+  data.forEach(r => {
+    if (!r.venues) { r.venues = r.venue ? [r.venue] : []; delete r.venue; }
+  });
+}
+async function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(VENUE_KEY,   JSON.stringify(venues));
+  try {
+    await sbSaveKey('till_products', data);
+    await sbSaveKey('till_venues', venues);
+  } catch(e) { console.warn('Supabase save failed:', e); }
+}
+
+// ── RENDER TABLE ──────────────────────────────────────────────────────────────
+function renderTable() {
+  const search  = document.getElementById('searchInput').value.toLowerCase();
+  const vFilter = document.getElementById('venueFilter').value;
+  const cFilter = document.getElementById('catFilter').value;
+  const groupBy = document.getElementById('groupBy').value;
+
+  let filtered = data.filter(r => {
+    const s = ((r.venues||[]).join(' ') + r.name + r.category + (r.notes||'')).toLowerCase();
+    return (!search || s.includes(search))
+      && (!vFilter || (r.venues||[]).includes(vFilter))
+      && (!cFilter || r.category === cFilter);
+  });
+
+  filtered.sort((a,b) => {
+    let av = (a[sortCol]||'').toString(), bv = (b[sortCol]||'').toString();
+    return av < bv ? -sortDir : av > bv ? sortDir : 0;
+  });
+
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="14"><div class="empty-state"><div>◎</div><p>No entries yet — add a venue then add your first item.</p></div></td></tr>`;
+    updateStats(filtered); return;
+  }
+
+  if (groupBy === 'venue') {
+    // Each venue gets its own collapsible group
+    const groups = {};
+    filtered.forEach(r => {
+      const vs = vFilter ? [vFilter] : (r.venues.length ? r.venues : ['Unassigned']);
+      vs.forEach(v => (groups[v] = groups[v]||[]).push(r));
+    });
+    Object.keys(groups).sort().forEach(grp => appendGroup(tbody, grp, groups[grp]));
+  } else if (groupBy === 'category') {
+    const groups = {};
+    filtered.forEach(r => (groups[r.category] = groups[r.category]||[]).push(r));
+    Object.entries(groups).forEach(([grp, rows]) => appendGroup(tbody, grp, rows));
+  } else {
+    filtered.forEach(r => tbody.appendChild(makeRow(r)));
+  }
+
+  updateStats(filtered);
+  updateSortIndicators();
+}
+
+function appendGroup(tbody, grp, rows) {
+  const groupId = 'grp-' + grp.replace(/[^a-z0-9]/gi,'_');
+  const htr = document.createElement('tr');
+  htr.className = 'venue-header';
+  htr.innerHTML = `<td colspan="14"><span class="venue-header-label"><i class="group-chevron" id="chev-${groupId}">▾</i> ${grp} &nbsp;<span style="color:var(--muted);font-weight:400">(${rows.length})</span></span></td>`;
+  htr.addEventListener('click', () => {
+    const chev = document.getElementById('chev-'+groupId);
+    const collapsed = chev.classList.toggle('collapsed');
+    document.querySelectorAll(`.group-row[data-group="${groupId}"]`).forEach(r => r.classList.toggle('hidden', collapsed));
+  });
+  tbody.appendChild(htr);
+  rows.forEach(r => {
+    const row = makeRow(r);
+    row.classList.add('group-row');
+    row.dataset.group = groupId;
+    tbody.appendChild(row);
+  });
+}
+
+function p(v) {
+  return (v !== '' && v !== null && v !== undefined)
+    ? `<span class="price">£${parseFloat(v).toFixed(2)}</span>`
+    : `<span class="price-na">—</span>`;
+}
+
+function makeRow(r) {
+  const tr = document.createElement('tr');
+  const bc = {Game:'badge-game',Food:'badge-food',Drink:'badge-drink'}[r.category];
+  const isGame = r.category === 'Game';
+  const vList = r.venues || [];
+  const isMulti = vList.length > 1;
+  const vTags = vList.length
+    ? vList.map(v=>`<span class="venue-tag${isMulti?' multi':''}">${v}</span>`).join('')
+    : `<span class="price-na">—</span>`;
+
+  tr.innerHTML = `
+    <td><strong>${r.name}</strong></td>
+    <td><span class="badge ${bc}">${r.category}</span></td>
+    <td><div class="venue-tags">${vTags}</div></td>
+    <td>${isGame?p(r.mm1a):'<span class="price-na">—</span>'}</td>
+    <td>${isGame?p(r.mm1c):'<span class="price-na">—</span>'}</td>
+    <td>${isGame?p(r.mm2a):'<span class="price-na">—</span>'}</td>
+    <td>${isGame?p(r.mm2c):'<span class="price-na">—</span>'}</td>
+    <td>${isGame?p(r.mm3a):'<span class="price-na">—</span>'}</td>
+    <td>${isGame?p(r.mm3c):'<span class="price-na">—</span>'}</td>
+    <td>${isGame?p(r.perHour):'<span class="price-na">—</span>'}</td>
+    <td>${isGame?p(r.perHalf):'<span class="price-na">—</span>'}</td>
+    <td>${!isGame?p(r.fixed):'<span class="price-na">—</span>'}</td>
+    <td><small style="color:var(--muted)">${r.notes||''}</small></td>
+    <td><div class="action-btns">
+      <button class="btn btn-ghost btn-sm" onclick="editEntry('${r.id}')">Edit</button>
+      <button class="btn btn-purple btn-sm" onclick="openCopyModal('${r.id}')">Copy</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteEntry('${r.id}')">Del</button>
+    </div></td>`;
+  return tr;
+}
+
+function updateStats(filtered) {
+  const allV = new Set(filtered.flatMap(r=>r.venues||[]));
+  document.getElementById('stat-entries').textContent  = filtered.length;
+  document.getElementById('stat-venues').textContent   = allV.size;
+  document.getElementById('stat-games').textContent    = filtered.filter(r=>r.category==='Game').length;
+  document.getElementById('stat-packages').textContent = filtered.filter(r=>r.category!=='Game').length;
+}
+
+function setSort(col) { if(sortCol===col)sortDir*=-1; else{sortCol=col;sortDir=1;} renderTable(); }
+function updateSortIndicators() {
+  const el = document.getElementById('sort-name');
+  if (el) el.textContent = sortCol==='name' ? (sortDir===1?' ↑':' ↓') : '';
+}
+
+// ── VENUE CHECKBOX HELPERS ────────────────────────────────────────────────────
+function buildCheckboxes(containerId, selectedVenues=[], disabledVenues=[]) {
+  const wrap = document.getElementById(containerId);
+  if (!venues.length) {
+    wrap.innerHTML = '<span class="no-venues-msg">No venues yet — add via ⚙ Manage Venues first.</span>'; return;
+  }
+  wrap.innerHTML = '';
+  venues.forEach(v => {
+    const isDisabled = disabledVenues.includes(v);
+    const isChecked  = isDisabled || selectedVenues.includes(v);
+    const lbl = document.createElement('label');
+    lbl.className = 'vc-label' + (isChecked?' checked':'') + (isDisabled?' disabled-label':'');
+    lbl.innerHTML = `<input type="checkbox" value="${v}" ${isChecked?'checked':''} ${isDisabled?'disabled':''}> ${v}${isDisabled?' ✓':''}`;
+    if (!isDisabled) {
+      lbl.querySelector('input').addEventListener('change', e => lbl.classList.toggle('checked', e.target.checked));
+    }
+    wrap.appendChild(lbl);
+  });
+}
+
+function getChecked(containerId) {
+  return [...document.querySelectorAll(`#${containerId} input[type="checkbox"]:not(:disabled):checked`)].map(i=>i.value);
+}
+
+function toggleSelectAll(containerId) {
+  const boxes = document.querySelectorAll(`#${containerId} input[type="checkbox"]:not(:disabled)`);
+  const allOn = [...boxes].every(b=>b.checked);
+  boxes.forEach(b => { b.checked = !allOn; b.closest('label').classList.toggle('checked', !allOn); });
+}
+
+// ── ADD / EDIT MODAL ──────────────────────────────────────────────────────────
+function toggleCatFields() {
+  const cat = document.getElementById('fCat').value;
+  document.getElementById('gamePrices').style.display = cat==='Game' ? 'block' : 'none';
+  document.getElementById('fixedPrice').style.display = cat!=='Game' ? 'block' : 'none';
+}
+
+function openModal(id=null) {
+  editId = id;
+  document.getElementById('modalTitle').textContent = id ? 'Edit Entry' : 'Add New Entry';
+  ['fMM1A','fMM1C','fMM2A','fMM2C','fMM3A','fMM3C','fPerHour','fPerHalf','fFixed','fName','fNotes']
+    .forEach(f => document.getElementById(f).value = '');
+  document.getElementById('fCat').value = 'Game';
+  toggleCatFields();
+
+  let sel = [];
+  if (id) {
+    const r = data.find(x=>x.id===id);
+    if (!r) return;
+    sel = r.venues || [];
+    document.getElementById('fCat').value     = r.category;
+    document.getElementById('fName').value    = r.name;
+    document.getElementById('fMM1A').value    = r.mm1a    || '';
+    document.getElementById('fMM1C').value    = r.mm1c    || '';
+    document.getElementById('fMM2A').value    = r.mm2a    || '';
+    document.getElementById('fMM2C').value    = r.mm2c    || '';
+    document.getElementById('fMM3A').value    = r.mm3a    || '';
+    document.getElementById('fMM3C').value    = r.mm3c    || '';
+    document.getElementById('fPerHour').value = r.perHour || '';
+    document.getElementById('fPerHalf').value = r.perHalf || '';
+    document.getElementById('fFixed').value   = r.fixed   || '';
+    document.getElementById('fNotes').value   = r.notes   || '';
+    toggleCatFields();
+  }
+  buildCheckboxes('venueCheckboxes', sel);
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+function saveEntry() {
+  const name = document.getElementById('fName').value.trim();
+  const sel  = getChecked('venueCheckboxes');
+  if (!name)       { showToast('Please enter a name', true); return; }
+  if (!sel.length) { showToast('Please select at least one venue', true); return; }
+  const cat = document.getElementById('fCat').value;
+  const entry = {
+    id: editId||uid(), name, category: cat, venues: sel,
+    mm1a:    cat==='Game' ? document.getElementById('fMM1A').value    : '',
+    mm1c:    cat==='Game' ? document.getElementById('fMM1C').value    : '',
+    mm2a:    cat==='Game' ? document.getElementById('fMM2A').value    : '',
+    mm2c:    cat==='Game' ? document.getElementById('fMM2C').value    : '',
+    mm3a:    cat==='Game' ? document.getElementById('fMM3A').value    : '',
+    mm3c:    cat==='Game' ? document.getElementById('fMM3C').value    : '',
+    perHour: cat==='Game' ? document.getElementById('fPerHour').value : '',
+    perHalf: cat==='Game' ? document.getElementById('fPerHalf').value : '',
+    fixed:   cat!=='Game' ? document.getElementById('fFixed').value   : '',
+    notes:   document.getElementById('fNotes').value.trim()
+  };
+  if (editId) { const i=data.findIndex(x=>x.id===editId); if(i>-1) data[i]=entry; }
+  else data.push(entry);
+  save(); closeModal(); renderTable();
+  showToast(editId ? 'Entry updated!' : `Added to ${sel.length} venue${sel.length>1?'s':''}!`);
+}
+
+function editEntry(id)   { openModal(id); }
+function deleteEntry(id) {
+  if (!confirm('Delete this entry?')) return;
+  data = data.filter(x=>x.id!==id);
+  save().catch(console.warn); renderTable(); showToast('Entry deleted');
+}
+
+// ── COPY TO VENUES MODAL ──────────────────────────────────────────────────────
+function openCopyModal(id) {
+  copyId = id;
+  const r = data.find(x=>x.id===id);
+  if (!r) return;
+  document.getElementById('copyItemName').textContent = `"${r.name}"`;
+  // Already-assigned venues are disabled/locked; others are selectable
+  buildCheckboxes('copyVenueCheckboxes', [], r.venues||[]);
+  document.getElementById('copyModal').classList.add('open');
+}
+
+function closeCopyModal() { document.getElementById('copyModal').classList.remove('open'); copyId=null; }
+
+function executeCopy() {
+  const r = data.find(x=>x.id===copyId);
+  if (!r) return;
+  const newV = getChecked('copyVenueCheckboxes');
+  if (!newV.length) { showToast('Select at least one new venue', true); return; }
+  r.venues = [...new Set([...(r.venues||[]), ...newV])];
+  save(); closeCopyModal(); renderTable();
+  showToast(`Copied to ${newV.length} more venue${newV.length>1?'s':''}!`);
+}
+
+// ── VENUE FILTER DROPDOWN ─────────────────────────────────────────────────────
+function renderVenueFilterDropdown() {
+  const vf  = document.getElementById('venueFilter');
+  const cur = vf.value;
+  vf.innerHTML = '<option value="">All Venues</option>';
+  venues.forEach(v => { const o=new Option(v,v); if(v===cur)o.selected=true; vf.appendChild(o); });
+}
+
+// ── VENUE MANAGER ─────────────────────────────────────────────────────────────
+function openVenueManager() { renderVenueList(); document.getElementById('venueModal').classList.add('open'); }
+function closeVenueModal()  { document.getElementById('venueModal').classList.remove('open'); renderVenueFilterDropdown(); renderTable(); }
+
+function renderVenueList() {
+  const vl = document.getElementById('venueList');
+  vl.innerHTML = '';
+  if (!venues.length) { vl.innerHTML='<p style="color:var(--muted);font-size:0.8rem">No venues yet.</p>'; return; }
+  venues.forEach((v,i) => {
+    const div = document.createElement('div');
+    div.className = 'venue-item';
+    div.innerHTML = `<span>${v}</span><button class="btn btn-danger btn-sm" onclick="removeVenue(${i})">Remove</button>`;
+    vl.appendChild(div);
+  });
+}
+
+function addVenue() {
+  const inp  = document.getElementById('newVenueName');
+  const name = inp.value.trim();
+  if (!name) return;
+  if (venues.includes(name)) { showToast('Venue already exists', true); return; }
+  venues.push(name); save(); inp.value=''; renderVenueList(); showToast('Venue added!');
+}
+
+function removeVenue(i) {
+  const name = venues[i];
+  const inUse = data.some(r=>(r.venues||[]).includes(name));
+  if (inUse && !confirm(`"${name}" is assigned to some entries. Remove it anyway?`)) return;
+  data.forEach(r => { r.venues=(r.venues||[]).filter(v=>v!==name); });
+  venues.splice(i,1); save().catch(console.warn); renderVenueList(); renderTable();
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isError ? 'var(--accent2)' : 'var(--success)';
+  t.style.color = isError ? '#fff' : '#000';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+document.getElementById('modal').addEventListener('click',      e=>{if(e.target===e.currentTarget)closeModal();});
+document.getElementById('copyModal').addEventListener('click',  e=>{if(e.target===e.currentTarget)closeCopyModal();});
+document.getElementById('venueModal').addEventListener('click', e=>{if(e.target===e.currentTarget)closeVenueModal();});
+
+load();
+renderVenueFilterDropdown();
+renderTable();
+</script>
+</body>
+</html>
